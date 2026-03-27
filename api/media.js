@@ -11,20 +11,23 @@ const { BlobServiceClient } = require('@azure/storage-blob');
 const { CosmosClient } = require('@azure/cosmos');
 const { v4: uuidv4 } = require('uuid');
 
-// ── Azure clients ─────────────────────────────────────────────────────────────
-const blobServiceClient = BlobServiceClient.fromConnectionString(
-  process.env.STORAGE_CONNECTION_STRING
-);
-const containerClient = blobServiceClient.getContainerClient(
-  process.env.STORAGE_CONTAINER_NAME || 'media'
-);
+// ── Azure clients (lazy-init to avoid crash when env vars are missing) ────────
+let blobServiceClient, containerClient, cosmosClient, database, cosmosContainer;
 
-const cosmosClient = new CosmosClient({
-  endpoint: process.env.COSMOS_ENDPOINT,
-  key: process.env.COSMOS_KEY,
-});
-const database = cosmosClient.database(process.env.COSMOS_DATABASE || 'buildtrack');
-const cosmosContainer = database.container(process.env.COSMOS_CONTAINER || 'media');
+function initAzureClients() {
+  if (!process.env.STORAGE_CONNECTION_STRING) {
+    throw new Error('STORAGE_CONNECTION_STRING is not configured. Add it in Azure App Service → Environment variables.');
+  }
+  if (!blobServiceClient) {
+    blobServiceClient = BlobServiceClient.fromConnectionString(process.env.STORAGE_CONNECTION_STRING);
+    containerClient = blobServiceClient.getContainerClient(process.env.STORAGE_CONTAINER_NAME || 'media');
+  }
+  if (!cosmosClient) {
+    cosmosClient = new CosmosClient({ endpoint: process.env.COSMOS_ENDPOINT, key: process.env.COSMOS_KEY });
+    database = cosmosClient.database(process.env.COSMOS_DATABASE || 'buildtrack');
+    cosmosContainer = database.container(process.env.COSMOS_CONTAINER || 'media');
+  }
+}
 
 // ── Multer — memory storage (stream directly to Blob) ─────────────────────────
 const upload = multer({
@@ -39,11 +42,13 @@ const upload = multer({
 
 // ── Helper: ensure Blob container exists ─────────────────────────────────────
 async function ensureContainer() {
+  initAzureClients();
   await containerClient.createIfNotExists({ access: 'blob' });
 }
 
 // ── Helper: ensure Cosmos container exists ───────────────────────────────────
 async function ensureCosmosContainer() {
+  initAzureClients();
   await database.containers.createIfNotExists({
     id: process.env.COSMOS_CONTAINER || 'media',
     partitionKey: { paths: ['/projectId'] },
@@ -256,6 +261,7 @@ router.delete('/:id', async (req, res) => {
     const item = resources[0];
 
     // Delete from Blob Storage
+    initAzureClients();
     const blockBlobClient = containerClient.getBlockBlobClient(item.blobName);
     await blockBlobClient.deleteIfExists();
 
