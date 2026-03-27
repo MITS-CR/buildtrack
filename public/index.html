@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MITS BuildTrack — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --saddle: #D4A843;
+    --saddle-light: #EDD9A3;
+    --linen: #F5F0E3;
+    --charcoal: #2C2C2A;
+    --stone: #E8E3D8;
+    --warm-gray: #A09A8C;
+    --soft-cream: #FAF8F2;
+    --deep-gold: #B08C35;
+    --success: #6B8F5E;
+    --warning: #C4873B;
+    --danger: #A04040;
+    --info: #4A7090;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--linen); color: var(--charcoal); font-family: 'DM Sans', sans-serif; font-size: 14px; }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+    background: var(--charcoal); padding: 24px 0; z-index: 10;
+    display: flex; flex-direction: column;
+  }
+  .sidebar-logo {
+    padding: 0 24px; margin-bottom: 40px;
+    font-family: 'Nunito', sans-serif; font-size: 28px; font-weight: 700; color: var(--linen);
+  }
+  .sidebar-logo span { color: var(--saddle); }
+  .sidebar-label {
+    padding: 0 24px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--warm-gray); margin: 24px 0 8px;
+  }
+  .sidebar-item {
+    padding: 10px 24px; color: var(--warm-gray); cursor: pointer;
+    display: flex; align-items: center; gap: 12px; transition: all 0.15s;
+    font-size: 13px; border-left: 3px solid transparent;
+  }
+  .sidebar-item:hover { background: rgba(255,255,255,0.04); color: var(--linen); }
+  .sidebar-item.active {
+    color: var(--saddle); border-left-color: var(--saddle);
+    background: rgba(212,168,67,0.06);
+  }
+  .sidebar-item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+  .sidebar-footer {
+    margin-top: auto; padding: 20px 24px; border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .sidebar-footer-text { font-size: 10px; color: rgba(255,255,255,0.2); letter-spacing: 0.1em; }
+
+  /* Main */
+  .main { margin-left: 240px; padding: 32px; min-height: 100vh; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Header */
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 32px;
+  }
+  .header h1 {
+    font-family: 'Nunito', sans-serif; font-size: 24px; font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .header-actions { display: flex; gap: 12px; align-items: center; }
+  .notif-badge {
+    position: relative; width: 36px; height: 36px; border-radius: 10px;
+    background: white; border: 1px solid var(--stone); display: flex;
+    align-items: center; justify-content: center; cursor: pointer;
+  }
+  .notif-badge::after {
+    content: '3'; position: absolute; top: -4px; right: -4px;
+    width: 18px; height: 18px; border-radius: 50%; background: var(--danger);
+    color: white; font-size: 10px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .user-pill {
+    display: flex; align-items: center; gap: 10px; padding: 6px 16px 6px 6px;
+    background: white; border: 1px solid var(--stone); border-radius: 10px;
+    cursor: pointer;
+  }
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 8px; background: var(--saddle);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: var(--charcoal);
+  }
+  .user-name { font-size: 13px; font-weight: 500; }
+  .user-role { font-size: 11px; color: var(--warm-gray); }
+
+  /* Stat cards */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: white; border-radius: 14px; padding: 22px;
+    border: 1px solid var(--stone); position: relative; overflow: hidden;
+  }
+  .stat-card::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .stat-card:nth-child(1)::after { background: var(--saddle); }
+  .stat-card:nth-child(2)::after { background: var(--success); }
+  .stat-card:nth-child(3)::after { background: var(--warning); }
+  .stat-card:nth-child(4)::after { background: var(--info); }
+  .stat-label { font-size: 12px; color: var(--warm-gray); margin-bottom: 8px; }
+  .stat-value {
+    font-family: 'Nunito', sans-serif; font-size: 32px; font-weight: 700;
+    line-height: 1; margin-bottom: 4px;
+  }
+  .stat-sub { font-size: 11px; color: var(--warm-gray); }
+  .stat-bar { height: 4px; border-radius: 2px; background: var(--stone); margin-top: 12px; }
+  .stat-bar-fill { height: 100%; border-radius: 2px; }
+
+  /* Grid layout */
+  .content-grid { display: grid; grid-template-columns: 1fr 380px; gap: 24px; }
+
+  /* Cards */
+  .card {
+    background: white; border-radius: 14px; border: 1px solid var(--stone);
+    padding: 24px; margin-bottom: 24px;
+  }
+  .card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+  }
+  .card-title { font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 700; }
+  .card-action { font-size: 12px; color: var(--saddle); cursor: pointer; font-weight: 500; }
+
+  /* Milestones */
+  .milestone-item {
+    display: flex; gap: 16px; padding: 14px 0;
+    border-bottom: 1px solid var(--stone);
+  }
+  .milestone-item:last-child { border-bottom: none; }
+  .milestone-status {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .milestone-status.done { background: #D6E8D0; color: var(--success); }
+  .milestone-status.active { background: var(--saddle-light); color: var(--deep-gold); }
+  .milestone-status.pending { background: var(--stone); color: var(--warm-gray); }
+  .milestone-info { flex: 1; }
+  .milestone-name { font-weight: 500; font-size: 13px; margin-bottom: 2px; }
+  .milestone-date { font-size: 11px; color: var(--warm-gray); }
+  .milestone-pct {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500;
+    display: flex; align-items: center;
+  }
+
+  /* Activity */
+  .activity-item { display: flex; gap: 12px; padding: 12px 0; }
+  .activity-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .activity-text { font-size: 13px; line-height: 1.5; }
+  .activity-time { font-size: 11px; color: var(--warm-gray); margin-top: 2px; }
+
+  /* Budget */
+  .budget-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--stone); font-size: 13px;
+  }
+  .budget-row:last-child { border-bottom: none; }
+  .budget-label { color: var(--warm-gray); }
+  .budget-value { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+
+  /* Notifications panel */
+  .notif-item {
+    padding: 12px; border-radius: 10px; margin-bottom: 8px;
+    border-left: 3px solid transparent; background: var(--soft-cream);
+  }
+  .notif-item.urgent { border-left-color: var(--danger); }
+  .notif-item.action { border-left-color: var(--saddle); }
+  .notif-item.info { border-left-color: var(--info); }
+  .notif-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+  .notif-sub { font-size: 11px; color: var(--warm-gray); }
+
+  /* Tag */
+  .tag {
+    display: inline-block; padding: 3px 10px; border-radius: 100px;
+    font-size: 11px; font-weight: 500;
+  }
+  .tag-gold { background: var(--saddle-light); color: var(--deep-gold); }
+  .tag-green { background: #D6E8D0; color: #3A6B2E; }
+  .tag-red { background: #F0C4C4; color: #8B3030; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Week tabs */
+  .week-tab {
+    padding: 12px 20px; font-size: 12px; color: var(--warm-gray); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap;
+    font-weight: 500;
+  }
+  .week-tab:hover { color: var(--charcoal); }
+  .week-tab.active { color: var(--saddle); border-bottom-color: var(--saddle); }
+  .week-count {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    background: var(--stone); padding: 1px 6px; border-radius: 4px; margin-left: 4px;
+  }
+  .week-tab.active .week-count { background: var(--saddle-light); color: var(--deep-gold); }
+
+  /* Media stats */
+  .media-stat {
+    flex: 1; text-align: center; padding: 14px 12px;
+    border-right: 1px solid var(--stone);
+  }
+  .media-stat:last-child { border-right: none; }
+  .media-stat-num { font-family: 'Nunito', sans-serif; font-size: 20px; font-weight: 700; }
+  .media-stat-label { font-size: 11px; color: var(--warm-gray); margin-top: 2px; }
+
+  /* Filter chips */
+  .filter-chip {
+    padding: 5px 14px; border-radius: 8px; font-size: 11px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--stone); background: white;
+    color: var(--charcoal); font-family: inherit; transition: all 0.15s;
+  }
+  .filter-chip:hover { border-color: var(--saddle); }
+  .filter-chip.active { background: var(--saddle); color: white; border-color: var(--saddle); }
+
+  /* Photo cards */
+  .photo-card {
+    border-radius: 10px; overflow: hidden; background: white;
+    border: 1px solid var(--stone); cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s; position: relative;
+  }
+  .photo-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+  .photo-card.featured { grid-column: span 2; grid-row: span 2; }
+  .photo-card-img {
+    width: 100%; aspect-ratio: 4/3; position: relative; overflow: hidden;
+    background: var(--stone);
+  }
+  .photo-card-img img, .photo-card-img video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .photo-card.featured .photo-card-img { aspect-ratio: auto; height: 100%; min-height: 220px; }
+  .photo-card-badge {
+    position: absolute; top: 8px; left: 8px; padding: 3px 8px; border-radius: 5px;
+    font-size: 10px; font-weight: 600; background: rgba(0,0,0,0.55); color: white;
+    display: flex; align-items: center; gap: 4px; z-index: 2;
+  }
+  .photo-card-badge.video::before {
+    content: ''; width: 0; height: 0;
+    border-left: 5px solid white; border-top: 3px solid transparent; border-bottom: 3px solid transparent;
+  }
+  .photo-card-play {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 44px; height: 44px; border-radius: 50%; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; z-index: 2;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .photo-card-play svg { margin-left: 2px; }
+  .photo-card:hover .photo-card-play { opacity: 1; }
+  .photo-card-info { padding: 10px 12px; }
+  .photo-card-info-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 14px;
+    background: linear-gradient(transparent, rgba(44,44,42,0.85)); z-index: 2;
+  }
+  .photo-card-info-overlay .photo-card-name { color: white; }
+  .photo-card-info-overlay .photo-card-meta { color: rgba(255,255,255,0.6); }
+  .photo-card-name { font-size: 12px; font-weight: 500; margin-bottom: 2px; }
+  .photo-card-meta { font-size: 10px; color: var(--warm-gray); }
+  .more-card {
+    background: var(--charcoal); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; border-color: var(--charcoal);
+  }
+  .stat-card, .card { animation: fadeUp 0.4s ease both; }
+  .stat-card:nth-child(2) { animation-delay: 0.05s; }
+  .stat-card:nth-child(3) { animation-delay: 0.1s; }
+  .stat-card:nth-child(4) { animation-delay: 0.15s; }
+
+  /* ── MEDIA PAGE ────────────────────────────────────────────────────── */
+  .media-page-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 28px;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; font-family: inherit; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--saddle); color: white; }
+  .btn-primary:hover { background: var(--deep-gold); }
+  .btn-secondary { background: white; color: var(--charcoal); border: 1px solid var(--stone); }
+  .btn-secondary:hover { border-color: var(--saddle); }
+  .btn-danger { background: #F0C4C4; color: var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: white; }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 2px dashed var(--stone); border-radius: 14px;
+    padding: 40px; text-align: center; cursor: pointer;
+    transition: all 0.2s; margin-bottom: 24px; background: white;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--saddle); background: rgba(212,168,67,0.04);
+  }
+  .upload-zone-icon { font-size: 36px; margin-bottom: 12px; }
+  .upload-zone-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+  .upload-zone-sub { font-size: 12px; color: var(--warm-gray); }
+  #fileInput { display: none; }
+
+  /* Upload progress */
+  .upload-progress-bar {
+    height: 4px; border-radius: 2px; background: var(--stone); overflow: hidden;
+    margin-top: 12px;
+  }
+  .upload-progress-fill {
+    height: 100%; border-radius: 2px; background: var(--saddle);
+    transition: width 0.3s; width: 0%;
+  }
+  .upload-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; background: var(--soft-cream); border-radius: 10px;
+    margin-bottom: 8px; font-size: 13px;
+  }
+  .upload-item-name { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .upload-item-status { font-size: 11px; color: var(--warm-gray); }
+  .upload-item-status.done { color: var(--success); }
+  .upload-item-status.error { color: var(--danger); }
+
+  /* Full media grid */
+  .media-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .media-grid.list-view { grid-template-columns: 1fr; }
+  .media-grid.list-view .photo-card { display: flex; border-radius: 10px; }
+  .media-grid.list-view .photo-card-img { width: 80px; height: 60px; aspect-ratio: auto; flex-shrink: 0; }
+  .media-grid.list-view .photo-card.featured { grid-column: span 1; grid-row: span 1; }
+
+  /* Category filters bar */
+  .filters-bar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .view-toggle {
+    margin-left: auto; display: flex; gap: 4px;
+  }
+  .view-btn {
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--stone);
+    background: white; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: var(--warm-gray); transition: all 0.15s;
+  }
+  .view-btn.active { background: var(--saddle); color: white; border-color: var(--saddle); }
+
+  /* Lightbox */
+  .lightbox {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+    z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox-inner {
+    position: relative; max-width: 90vw; max-height: 90vh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .lightbox-media { max-width: 100%; max-height: 80vh; border-radius: 10px; }
+  .lightbox-close {
+    position: absolute; top: -40px; right: 0;
+    width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: white; font-size: 18px; border: none; transition: background 0.15s;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-info {
+    margin-top: 14px; text-align: center; color: rgba(255,255,255,0.8);
+  }
+  .lightbox-info h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .lightbox-info p { font-size: 12px; color: rgba(255,255,255,0.5); }
+  .lightbox-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none; color: white;
+    font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .lightbox-nav:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-prev { left: -60px; }
+  .lightbox-next { right: -60px; }
+  .lightbox-actions {
+    display: flex; gap: 8px; margin-top: 12px;
+  }
+  .lightbox-btn {
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 500;
+    border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1);
+    color: white; cursor: pointer; transition: all 0.15s; font-family: inherit;
+  }
+  .lightbox-btn:hover { background: rgba(255,255,255,0.2); }
+  .lightbox-btn.danger { border-color: rgba(160,64,64,0.5); color: #F0C4C4; }
+  .lightbox-btn.danger:hover { background: var(--danger); border-color: var(--danger); color: white; }
+
+  /* Upload meta form */
+  .upload-meta {
+    display: none; background: white; border: 1px solid var(--stone);
+    border-radius: 14px; padding: 20px; margin-bottom: 20px;
+  }
+  .upload-meta.visible { display: block; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 12px; font-weight: 500; color: var(--warm-gray); }
+  .form-control {
+    padding: 8px 12px; border: 1px solid var(--stone); border-radius: 8px;
+    font-family: inherit; font-size: 13px; background: var(--soft-cream);
+    transition: border-color 0.15s;
+  }
+  .form-control:focus { outline: none; border-color: var(--saddle); }
+  select.form-control { cursor: pointer; }
+
+  /* Toast notifications */
+  .toast-container {
+    position: fixed; bottom: 24px; right: 24px; z-index: 2000;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500;
+    max-width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    animation: fadeUp 0.3s ease;
+  }
+  .toast.success { background: var(--success); color: white; }
+  .toast.error { background: var(--danger); color: white; }
+  .toast.info { background: var(--info); color: white; }
+
+  /* Loading spinner */
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--stone);
+    border-top-color: var(--saddle); border-radius: 50%;
+    animation: spin 0.7s linear infinite; margin: 40px auto;
+  }
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--warm-gray);
+  }
+  .empty-state-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+  .empty-state-title { font-size: 16px; font-weight: 600; color: var(--charcoal); margin-bottom: 6px; }
+
+  /* Thumbnail placeholder colors */
+  .thumb-drone { background: linear-gradient(135deg, var(--saddle-light), var(--stone)); }
+  .thumb-interior { background: linear-gradient(135deg, var(--stone), var(--warm-gray)); }
+  .thumb-exterior { background: linear-gradient(135deg, #C8DAE8, var(--stone)); }
+  .thumb-mep { background: linear-gradient(135deg, var(--saddle-light), var(--deep-gold)); }
+  .thumb-photo { background: linear-gradient(135deg, var(--stone), #C8DAE8); }
+  .thumb-video { background: linear-gradient(135deg, var(--charcoal), #444); }
+
+  /* Delete confirm overlay on card */
+  .delete-confirm {
+    position: absolute; inset: 0; background: rgba(44,44,42,0.85);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; z-index: 5; border-radius: 10px;
+  }
+  .delete-confirm.show { display: flex; }
+  .delete-confirm p { color: white; font-size: 12px; text-align: center; padding: 0 12px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">m<span>i</span>ts</div>
+
+  <div class="sidebar-label">Project</div>
+  <div class="sidebar-item active" onclick="showPage('dashboard', this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    Dashboard
+  </div>
+  <div class="sidebar-item" onclick="showPage('milestones', this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Milestones
+  </div>
+  <div class="sidebar-item" onclick="showPage('media', this)">
+    <svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 00-2 2v9a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2h-3l-2.5-3z"/><circle cx="12" cy="14" r="3"/></svg>
+    Media
+  </div>
+
+  <div class="sidebar-label">Documents</div>
+  <div class="sidebar-item">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Agreements
+  </div>
+  <div class="sidebar-item">
+    <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+    Submittals
+  </div>
+  <div class="sidebar-item">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    Budget
+  </div>
+  <div class="sidebar-item">
+    <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Change orders
+  </div>
+
+  <div class="sidebar-label">Settings</div>
+  <div class="sidebar-item">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    Settings
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-footer-text">FOCUS · AGILITY · TRUST · ADAPTABILITY</div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- ══════════════════════════════════════════════════════════
+       DASHBOARD PAGE
+  ══════════════════════════════════════════════════════════ -->
+  <div id="page-dashboard" class="page active">
+
+    <div class="header">
+      <div>
+        <h1>Residencial Las Palmas</h1>
+        <div style="font-size:12px;color:var(--warm-gray);margin-top:4px;">Project ID: MITS-2026-041 &nbsp;·&nbsp; Phase 2 of 4</div>
+      </div>
+      <div class="header-actions">
+        <div class="notif-badge">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--charcoal)" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </div>
+        <div class="user-pill">
+          <div class="user-avatar">JR</div>
+          <div>
+            <div class="user-name">José Rivera</div>
+            <div class="user-role">Engineer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats (media stat card is live) -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Overall progress</div>
+        <div class="stat-value">67%</div>
+        <div class="stat-sub">3 of 8 milestones complete</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:67%;background:var(--saddle);"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Budget used</div>
+        <div class="stat-value">$1.2M</div>
+        <div class="stat-sub">of $2.1M total budget</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:57%;background:var(--success);"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending approvals</div>
+        <div class="stat-value">5</div>
+        <div class="stat-sub">2 change orders, 3 submittals</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:100%;background:var(--warning);"></div></div>
+      </div>
+      <div class="stat-card" id="dash-media-stat-card">
+        <div class="stat-label">Media files</div>
+        <div class="stat-value" id="dash-media-count">—</div>
+        <div class="stat-sub" id="dash-media-sub">Loading…</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:40%;background:var(--info);"></div></div>
+      </div>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+      <div>
+        <!-- Milestones -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Active milestones</div>
+            <div class="card-action">View all</div>
+          </div>
+          <div class="milestone-item">
+            <div class="milestone-status done">&#10003;</div>
+            <div class="milestone-info">
+              <div class="milestone-name">Foundation complete</div>
+              <div class="milestone-date">Completed Mar 2 &nbsp;·&nbsp; <span class="tag tag-green">Done</span></div>
+            </div>
+            <div class="milestone-pct">100%</div>
+          </div>
+          <div class="milestone-item">
+            <div class="milestone-status done">&#10003;</div>
+            <div class="milestone-info">
+              <div class="milestone-name">Structural framing</div>
+              <div class="milestone-date">Completed Mar 15 &nbsp;·&nbsp; <span class="tag tag-green">Done</span></div>
+            </div>
+            <div class="milestone-pct">100%</div>
+          </div>
+          <div class="milestone-item">
+            <div class="milestone-status active">&#9679;</div>
+            <div class="milestone-info">
+              <div class="milestone-name">MEP rough-in</div>
+              <div class="milestone-date">Due Apr 10 &nbsp;·&nbsp; <span class="tag tag-gold">In progress</span></div>
+            </div>
+            <div class="milestone-pct">72%</div>
+          </div>
+          <div class="milestone-item">
+            <div class="milestone-status pending">&#9675;</div>
+            <div class="milestone-info">
+              <div class="milestone-name">Exterior envelope</div>
+              <div class="milestone-date">Due May 1 &nbsp;·&nbsp; <span class="tag" style="background:var(--stone);color:var(--warm-gray);">Upcoming</span></div>
+            </div>
+            <div class="milestone-pct">0%</div>
+          </div>
+        </div>
+
+        <!-- Dashboard Media Widget -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="display:flex;align-items:center;border-bottom:1px solid var(--stone);overflow-x:auto;" id="dash-week-tabs">
+            <div class="week-tab" data-week="Week 9" onclick="dashSelectWeek(this)">Week 9 <span class="week-count" id="dash-count-9">—</span></div>
+            <div class="week-tab" data-week="Week 10" onclick="dashSelectWeek(this)">Week 10 <span class="week-count" id="dash-count-10">—</span></div>
+            <div class="week-tab" data-week="Week 11" onclick="dashSelectWeek(this)">Week 11 <span class="week-count" id="dash-count-11">—</span></div>
+            <div class="week-tab active" data-week="Week 12" onclick="dashSelectWeek(this)">Week 12 <span class="week-count" id="dash-count-12">—</span></div>
+          </div>
+
+          <div style="display:flex;gap:0;border-bottom:1px solid var(--stone);">
+            <div class="media-stat"><div class="media-stat-num" id="dash-stat-photos">—</div><div class="media-stat-label">Photos</div></div>
+            <div class="media-stat"><div class="media-stat-num" id="dash-stat-drone">—</div><div class="media-stat-label">Drone flights</div></div>
+            <div class="media-stat"><div class="media-stat-num" id="dash-stat-total">—</div><div class="media-stat-label">Total files</div></div>
+            <div class="media-stat"><div class="media-stat-num" id="dash-stat-size">—</div><div class="media-stat-label">Storage</div></div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px 12px;">
+            <div style="font-size:14px;font-weight:600;" id="dash-gallery-title">Week 12 — Media gallery</div>
+            <div style="display:flex;gap:6px;">
+              <button class="filter-chip active" onclick="dashFilter(this,'all')">All</button>
+              <button class="filter-chip" onclick="dashFilter(this,'drone')">Drone</button>
+              <button class="filter-chip" onclick="dashFilter(this,'interior')">Interior</button>
+              <button class="filter-chip" onclick="dashFilter(this,'exterior')">Exterior</button>
+              <button class="filter-chip" onclick="dashFilter(this,'mep')">MEP</button>
+            </div>
+          </div>
+
+          <div id="dash-photo-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 20px 20px;">
+            <div class="spinner"></div>
+          </div>
+        </div>
+
+        <!-- Budget -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Budget overview</div>
+            <div class="card-action">Full report</div>
+          </div>
+          <div class="budget-row">
+            <span class="budget-label">Original contract</span>
+            <span class="budget-value">$2,100,000</span>
+          </div>
+          <div class="budget-row">
+            <span class="budget-label">Approved change orders (4)</span>
+            <span class="budget-value" style="color:var(--warning);">+$87,500</span>
+          </div>
+          <div class="budget-row">
+            <span class="budget-label">Pending change orders (2)</span>
+            <span class="budget-value" style="color:var(--warm-gray);">+$34,200</span>
+          </div>
+          <div class="budget-row" style="border-bottom:none;padding-top:14px;border-top:2px solid var(--charcoal);">
+            <span style="font-weight:600;">Current total</span>
+            <span class="budget-value" style="font-size:16px;">$2,221,700</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Notifications</div>
+            <div class="card-action">Mark all read</div>
+          </div>
+          <div class="notif-item urgent">
+            <div class="notif-title">Change order #005 awaiting approval</div>
+            <div class="notif-sub">Electrical panel upgrade — $18,400 &nbsp;·&nbsp; 2h ago</div>
+          </div>
+          <div class="notif-item action">
+            <div class="notif-title">Submittal review required</div>
+            <div class="notif-sub">Window specs — Milestone 4 &nbsp;·&nbsp; 5h ago</div>
+          </div>
+          <div class="notif-item action">
+            <div class="notif-title">Submittal review required</div>
+            <div class="notif-sub">HVAC duct layout — Milestone 3 &nbsp;·&nbsp; 1d ago</div>
+          </div>
+          <div class="notif-item info">
+            <div class="notif-title">Weekly report published</div>
+            <div class="notif-sub">Week 12 update with drone footage &nbsp;·&nbsp; 1d ago</div>
+          </div>
+          <div class="notif-item info">
+            <div class="notif-title">Milestone weight updated</div>
+            <div class="notif-sub">MEP rough-in adjusted to 15% &nbsp;·&nbsp; 2d ago</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">Recent activity</div></div>
+          <div class="activity-item">
+            <div class="activity-dot" style="background:var(--saddle);"></div>
+            <div>
+              <div class="activity-text"><strong>José Rivera</strong> uploaded 28 photos for Week 12</div>
+              <div class="activity-time">Today, 9:14 AM</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-dot" style="background:var(--success);"></div>
+            <div>
+              <div class="activity-text"><strong>María Chen</strong> approved submittal #023</div>
+              <div class="activity-time">Yesterday, 4:30 PM</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-dot" style="background:var(--warning);"></div>
+            <div>
+              <div class="activity-text"><strong>Carlos Mora</strong> submitted change order #005</div>
+              <div class="activity-time">Yesterday, 2:15 PM</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-dot" style="background:var(--info);"></div>
+            <div>
+              <div class="activity-text"><strong>Drone pilot</strong> completed aerial survey</div>
+              <div class="activity-time">Mar 19, 11:00 AM</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent documents</div>
+            <div class="card-action">View all</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--soft-cream);cursor:pointer;">
+              <div style="width:32px;height:32px;border-radius:6px;background:var(--saddle-light);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--deep-gold);font-weight:600;">PDF</div>
+              <div><div style="font-size:12px;font-weight:500;">Master Agreement v2.1</div><div style="font-size:10px;color:var(--warm-gray);">Updated Mar 15</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--soft-cream);cursor:pointer;">
+              <div style="width:32px;height:32px;border-radius:6px;background:#C8DAE8;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--info);font-weight:600;">XLS</div>
+              <div><div style="font-size:12px;font-weight:500;">Budget Tracker — March</div><div style="font-size:10px;color:var(--warm-gray);">Updated Mar 20</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:var(--soft-cream);cursor:pointer;">
+              <div style="width:32px;height:32px;border-radius:6px;background:#F0C4C4;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--danger);font-weight:600;">CO</div>
+              <div><div style="font-size:12px;font-weight:500;">Change Order #005</div><div style="font-size:10px;color:var(--warm-gray);">Pending approval</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /page-dashboard -->
+
+  <!-- ══════════════════════════════════════════════════════════
+       MEDIA PAGE
+  ══════════════════════════════════════════════════════════ -->
+  <div id="page-media" class="page">
+
+    <div class="header">
+      <div>
+        <h1>Media Library</h1>
+        <div style="font-size:12px;color:var(--warm-gray);margin-top:4px;">
+          Residencial Las Palmas &nbsp;·&nbsp; MITS-2026-041
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+          Upload files
+        </button>
+        <div class="notif-badge">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--charcoal)" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </div>
+        <div class="user-pill">
+          <div class="user-avatar">JR</div>
+          <div>
+            <div class="user-name">José Rivera</div>
+            <div class="user-role">Engineer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload zone -->
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
+         ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+      <div class="upload-zone-icon">📷</div>
+      <div class="upload-zone-title">Drop photos & videos here, or click to browse</div>
+      <div class="upload-zone-sub">Supports JPG, PNG, HEIC, MP4, MOV — up to 500 MB per file · 20 files at once</div>
+    </div>
+    <input type="file" id="fileInput" multiple accept="image/*,video/*" onchange="handleFileSelect(this.files)">
+
+    <!-- Upload metadata form -->
+    <div class="upload-meta" id="uploadMeta">
+      <div style="font-weight:600;margin-bottom:14px;font-size:14px;">Upload details</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Week</label>
+          <select class="form-control" id="uploadWeek">
+            <option>Week 9</option>
+            <option>Week 10</option>
+            <option>Week 11</option>
+            <option selected>Week 12</option>
+            <option>Week 13</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-control" id="uploadCategory">
+            <option value="photo">Photo</option>
+            <option value="drone">Drone</option>
+            <option value="interior">Interior</option>
+            <option value="exterior">Exterior</option>
+            <option value="mep">MEP</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Uploaded by</label>
+          <input class="form-control" id="uploadBy" type="text" value="José Rivera" placeholder="Your name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes (optional)</label>
+          <input class="form-control" id="uploadNotes" type="text" placeholder="e.g. East elevation survey">
+        </div>
+      </div>
+      <div id="uploadList" style="margin-bottom:14px;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" id="uploadBtn" onclick="startUpload()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+          Upload all
+        </button>
+        <button class="btn btn-secondary" onclick="cancelUpload()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="card" style="padding:0;margin-bottom:20px;">
+      <div style="display:flex;">
+        <div class="media-stat"><div class="media-stat-num" id="mp-total">—</div><div class="media-stat-label">Total files</div></div>
+        <div class="media-stat"><div class="media-stat-num" id="mp-photos">—</div><div class="media-stat-label">Photos</div></div>
+        <div class="media-stat"><div class="media-stat-num" id="mp-videos">—</div><div class="media-stat-label">Videos</div></div>
+        <div class="media-stat"><div class="media-stat-num" id="mp-drone">—</div><div class="media-stat-label">Drone</div></div>
+        <div class="media-stat"><div class="media-stat-num" id="mp-size">—</div><div class="media-stat-label">Storage used</div></div>
+      </div>
+    </div>
+
+    <!-- Filters + view toggle -->
+    <div class="filters-bar">
+      <select class="form-control" id="weekFilter" style="width:140px;" onchange="loadMedia()">
+        <option value="">All weeks</option>
+        <option>Week 9</option>
+        <option>Week 10</option>
+        <option>Week 11</option>
+        <option selected>Week 12</option>
+      </select>
+      <button class="filter-chip active" data-cat="all" onclick="setCategoryFilter(this)">All</button>
+      <button class="filter-chip" data-cat="drone" onclick="setCategoryFilter(this)">Drone</button>
+      <button class="filter-chip" data-cat="interior" onclick="setCategoryFilter(this)">Interior</button>
+      <button class="filter-chip" data-cat="exterior" onclick="setCategoryFilter(this)">Exterior</button>
+      <button class="filter-chip" data-cat="mep" onclick="setCategoryFilter(this)">MEP</button>
+      <button class="filter-chip" data-cat="photo" onclick="setCategoryFilter(this)">Photo</button>
+      <div class="view-toggle">
+        <button class="view-btn active" id="gridViewBtn" onclick="setView('grid')" title="Grid view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
+        <button class="view-btn" id="listViewBtn" onclick="setView('list')" title="List view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Media grid -->
+    <div class="media-grid" id="mediaGrid">
+      <div class="spinner"></div>
+    </div>
+  </div><!-- /page-media -->
+
+</div><!-- /main -->
+
+<!-- ── LIGHTBOX ─────────────────────────────────────────────────── -->
+<div class="lightbox" id="lightbox" onclick="closeLightboxOnBg(event)">
+  <div class="lightbox-inner">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <button class="lightbox-nav lightbox-prev" onclick="lightboxNav(-1)">&#8249;</button>
+    <button class="lightbox-nav lightbox-next" onclick="lightboxNav(1)">&#8250;</button>
+    <div id="lightboxMedia"></div>
+    <div class="lightbox-info">
+      <h3 id="lightboxName"></h3>
+      <p id="lightboxMeta"></p>
+    </div>
+    <div class="lightbox-actions">
+      <button class="lightbox-btn" onclick="downloadLightbox()">⬇ Download</button>
+      <button class="lightbox-btn danger" onclick="deleteLightboxItem()">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST CONTAINER ──────────────────────────────────────────── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ── SCRIPTS ──────────────────────────────────────────────────── -->
+<script>
+const API = '';  // same-origin; set to e.g. 'http://localhost:3000' for dev
+const PROJECT_ID = 'MITS-2026-041';
+
+// ── Page navigation ──────────────────────────────────────────────
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'media') loadMedia();
+  if (name === 'dashboard') loadDashboardMedia('Week 12', 'all');
+}
+
+// ── Toast ────────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ── Format bytes ─────────────────────────────────────────────────
+function fmtBytes(b) {
+  if (!b) return '0 B';
+  const k = 1024, s = ['B','KB','MB','GB','TB'];
+  const i = Math.floor(Math.log(b) / Math.log(k));
+  return (b / Math.pow(k, i)).toFixed(1) + ' ' + s[i];
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  DASHBOARD MEDIA WIDGET
+// ══════════════════════════════════════════════════════════════════
+let dashCurrentWeek = 'Week 12';
+let dashCurrentCat = 'all';
+let dashItems = [];
+
+async function loadDashboardMedia(week, cat) {
+  dashCurrentWeek = week;
+  dashCurrentCat = cat;
+  document.getElementById('dash-gallery-title').textContent = `${week} — Media gallery`;
+
+  // Stats
+  try {
+    const r = await fetch(`${API}/api/media/stats?projectId=${PROJECT_ID}`);
+    if (r.ok) {
+      const s = await r.json();
+      document.getElementById('dash-media-count').textContent = s.totalFiles ?? '—';
+      document.getElementById('dash-media-sub').textContent =
+        `${s.droneFlights ?? 0} drone flights, ${s.albums ?? 0} albums`;
+      // week counts
+      ['9','10','11','12'].forEach(w => {
+        const el = document.getElementById(`dash-count-${w}`);
+        if (el) el.textContent = s.byWeek?.[`Week ${w}`] ?? 0;
+      });
+    }
+  } catch {}
+
+  // Week stats
+  try {
+    const r = await fetch(`${API}/api/media?projectId=${PROJECT_ID}&week=${encodeURIComponent(week)}&limit=200`);
+    if (r.ok) {
+      const d = await r.json();
+      dashItems = d.items || [];
+      const photos = dashItems.filter(i => i.type === 'photo').length;
+      const drone = dashItems.filter(i => i.category === 'drone').length;
+      const sizeBytes = dashItems.reduce((sum, i) => sum + (i.size||0), 0);
+      document.getElementById('dash-stat-photos').textContent = photos;
+      document.getElementById('dash-stat-drone').textContent = drone;
+      document.getElementById('dash-stat-total').textContent = dashItems.length;
+      document.getElementById('dash-stat-size').textContent = fmtBytes(sizeBytes);
+      renderDashGrid(dashItems, cat);
+    } else {
+      renderDashGrid([], cat);
+    }
+  } catch {
+    renderDashGrid([], cat);
+  }
+}
+
+function dashSelectWeek(el) {
+  document.querySelectorAll('#dash-week-tabs .week-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  loadDashboardMedia(el.dataset.week, dashCurrentCat);
+}
+
+function dashFilter(el, cat) {
+  document.querySelectorAll('#page-dashboard .filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const filtered = cat === 'all' ? dashItems : dashItems.filter(i => i.category === cat);
+  renderDashGrid(filtered, cat);
+  dashCurrentCat = cat;
+}
+
+function renderDashGrid(items, cat) {
+  const grid = document.getElementById('dash-photo-grid');
+  if (!items.length) {
+    grid.innerHTML = `<div style="grid-column:span 4;padding:32px;text-align:center;color:var(--warm-gray);font-size:13px;">No media for this week yet. <span style="color:var(--saddle);cursor:pointer;" onclick="showPage('media',null)">Upload files →</span></div>`;
+    return;
+  }
+  const display = items.slice(0, 8);
+  const rest = items.length - 8;
+  let html = '';
+  display.forEach((item, idx) => {
+    const featured = idx === 0 ? 'featured' : '';
+    const isVideo = item.type === 'video';
+    const thumbClass = `thumb-${item.category || 'photo'}`;
+    const overlay = featured ? `
+      <div class="photo-card-info-overlay">
+        <div class="photo-card-name">${item.notes || item.originalName}</div>
+        <div class="photo-card-meta">${fmtDate(item.uploadedAt)} · ${item.uploadedBy}</div>
+      </div>` : `
+      <div class="photo-card-info">
+        <div class="photo-card-name">${item.notes || item.originalName}</div>
+        <div class="photo-card-meta">${fmtDate(item.uploadedAt)} · ${item.uploadedBy}</div>
+      </div>`;
+    html += `
+      <div class="photo-card ${featured}" onclick="openLightbox(dashItems, ${items.indexOf(item)})">
+        <div class="photo-card-img ${thumbClass}">
+          ${item.url ? (isVideo
+            ? `<video src="${item.url}" preload="metadata"></video>`
+            : `<img src="${item.url}" alt="${item.originalName}" loading="lazy">`)
+          : ''}
+        </div>
+        <div class="photo-card-badge ${isVideo?'video':''}">${item.category?.toUpperCase() || 'PHOTO'}</div>
+        ${isVideo ? `<div class="photo-card-play"><svg width="${featured?24:20}" height="${featured?24:20}" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>` : ''}
+        ${overlay}
+      </div>`;
+  });
+  if (rest > 0) {
+    html += `<div class="photo-card more-card" onclick="showPage('media',document.querySelector('.sidebar-item:nth-child(4)'))">
+      <div style="font-family:'Nunito',sans-serif;font-size:24px;font-weight:700;color:var(--linen);">+${rest}</div>
+      <div style="font-size:12px;color:var(--warm-gray);">more files</div>
+      <div style="font-size:11px;color:var(--saddle);margin-top:8px;">View all</div>
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MEDIA PAGE
+// ══════════════════════════════════════════════════════════════════
+let mediaItems = [];
+let currentView = 'grid';
+let currentCategory = 'all';
+let lightboxIndex = 0;
+let lightboxList = [];
+
+async function loadMedia() {
+  const grid = document.getElementById('mediaGrid');
+  grid.innerHTML = '<div class="spinner"></div>';
+
+  const week = document.getElementById('weekFilter').value;
+  const cat = currentCategory === 'all' ? '' : currentCategory;
+  const url = `${API}/api/media?projectId=${PROJECT_ID}${week ? '&week='+encodeURIComponent(week) : ''}${cat ? '&category='+cat : ''}`;
+
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('Failed to load media');
+    const d = await r.json();
+    mediaItems = d.items || [];
+    renderMediaGrid(mediaItems);
+    loadMediaStats();
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📷</div><div class="empty-state-title">No media yet</div><p style="font-size:13px;color:var(--warm-gray);">Upload your first photos or videos using the button above.</p></div>`;
+  }
+}
+
+async function loadMediaStats() {
+  try {
+    const r = await fetch(`${API}/api/media/stats?projectId=${PROJECT_ID}`);
+    if (!r.ok) return;
+    const s = await r.json();
+    document.getElementById('mp-total').textContent = s.totalFiles ?? 0;
+    document.getElementById('mp-photos').textContent = s.byCategory?.photo ?? 0;
+    document.getElementById('mp-videos').textContent = (s.byCategory?.drone ?? 0) + (s.byCategory?.video ?? 0);
+    document.getElementById('mp-drone').textContent = s.droneFlights ?? 0;
+    document.getElementById('mp-size').textContent = s.totalSizeFormatted ?? '0 B';
+  } catch {}
+}
+
+function renderMediaGrid(items) {
+  const grid = document.getElementById('mediaGrid');
+  if (!items.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">📷</div><div class="empty-state-title">No media found</div><p style="font-size:13px;color:var(--warm-gray);">Try a different filter, or upload new files.</p></div>`;
+    return;
+  }
+  let html = '';
+  items.forEach((item, idx) => {
+    const isVideo = item.type === 'video';
+    const thumbClass = `thumb-${item.category || 'photo'}`;
+    html += `
+      <div class="photo-card" onclick="openLightbox(mediaItems, ${idx})">
+        <div class="photo-card-img ${thumbClass}">
+          ${item.url ? (isVideo
+            ? `<video src="${item.url}" preload="metadata"></video>`
+            : `<img src="${item.url}" alt="${item.originalName}" loading="lazy">`)
+          : ''}
+        </div>
+        <div class="photo-card-badge ${isVideo?'video':''}">${item.category?.toUpperCase() || 'PHOTO'}</div>
+        ${isVideo ? `<div class="photo-card-play"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>` : ''}
+        <div class="photo-card-info">
+          <div class="photo-card-name">${item.notes || item.originalName}</div>
+          <div class="photo-card-meta">${fmtDate(item.uploadedAt)} · ${item.uploadedBy} · ${fmtBytes(item.size)}</div>
+        </div>
+        <div class="delete-confirm" id="del-${item.id}">
+          <p>Delete this file?</p>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-danger" style="font-size:11px;padding:5px 12px;" onclick="event.stopPropagation();confirmDelete('${item.id}','${item.projectId}')">Delete</button>
+            <button class="btn btn-secondary" style="font-size:11px;padding:5px 12px;" onclick="event.stopPropagation();hideDeleteConfirm('${item.id}')">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+  });
+  grid.innerHTML = html;
+}
+
+function setCategoryFilter(el) {
+  document.querySelectorAll('#page-media .filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentCategory = el.dataset.cat;
+  loadMedia();
+}
+
+function setView(v) {
+  currentView = v;
+  const grid = document.getElementById('mediaGrid');
+  document.getElementById('gridViewBtn').classList.toggle('active', v === 'grid');
+  document.getElementById('listViewBtn').classList.toggle('active', v === 'list');
+  grid.classList.toggle('list-view', v === 'list');
+}
+
+// ── Delete helpers ───────────────────────────────────────────────
+function showDeleteConfirm(id) {
+  document.getElementById('del-' + id)?.classList.add('show');
+}
+function hideDeleteConfirm(id) {
+  document.getElementById('del-' + id)?.classList.remove('show');
+}
+async function confirmDelete(id, projectId) {
+  try {
+    const r = await fetch(`${API}/api/media/${id}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error('Delete failed');
+    toast('File deleted', 'success');
+    loadMedia();
+    if (lightboxList === mediaItems) closeLightbox();
+  } catch (err) {
+    toast('Could not delete file: ' + err.message, 'error');
+  }
+}
+
+// ── Lightbox ─────────────────────────────────────────────────────
+function openLightbox(list, idx) {
+  lightboxList = list;
+  lightboxIndex = idx;
+  renderLightbox();
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeLightboxOnBg(e) {
+  if (e.target === document.getElementById('lightbox')) closeLightbox();
+}
+function lightboxNav(dir) {
+  lightboxIndex = (lightboxIndex + dir + lightboxList.length) % lightboxList.length;
+  renderLightbox();
+}
+function renderLightbox() {
+  const item = lightboxList[lightboxIndex];
+  if (!item) return;
+  const isVideo = item.type === 'video';
+  const container = document.getElementById('lightboxMedia');
+  if (isVideo) {
+    container.innerHTML = `<video class="lightbox-media" src="${item.url}" controls autoplay></video>`;
+  } else {
+    container.innerHTML = `<img class="lightbox-media" src="${item.url}" alt="${item.originalName}">`;
+  }
+  document.getElementById('lightboxName').textContent = item.notes || item.originalName;
+  document.getElementById('lightboxMeta').textContent =
+    `${item.category?.toUpperCase()} · ${fmtDate(item.uploadedAt)} · ${item.uploadedBy} · ${fmtBytes(item.size)}`;
+}
+function downloadLightbox() {
+  const item = lightboxList[lightboxIndex];
+  if (!item) return;
+  const a = document.createElement('a');
+  a.href = item.url;
+  a.download = item.originalName;
+  a.target = '_blank';
+  a.click();
+}
+async function deleteLightboxItem() {
+  const item = lightboxList[lightboxIndex];
+  if (!item) return;
+  if (!confirm(`Delete "${item.originalName}"?`)) return;
+  await confirmDelete(item.id, item.projectId);
+  closeLightbox();
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft') lightboxNav(-1);
+  if (e.key === 'ArrowRight') lightboxNav(1);
+  if (e.key === 'Escape') closeLightbox();
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  FILE UPLOAD
+// ══════════════════════════════════════════════════════════════════
+let pendingFiles = [];
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.add('drag-over');
+}
+function handleDragLeave() {
+  document.getElementById('uploadZone').classList.remove('drag-over');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  handleFileSelect(e.dataTransfer.files);
+}
+function handleFileSelect(files) {
+  pendingFiles = Array.from(files);
+  if (!pendingFiles.length) return;
+  document.getElementById('uploadMeta').classList.add('visible');
+
+  const list = document.getElementById('uploadList');
+  list.innerHTML = pendingFiles.map((f, i) => `
+    <div class="upload-item" id="uitem-${i}">
+      <span style="font-size:16px;">${f.type.startsWith('video') ? '🎬' : '📷'}</span>
+      <span class="upload-item-name">${f.name}</span>
+      <span class="upload-item-status" id="ustatus-${i}">${fmtBytes(f.size)}</span>
+    </div>`).join('');
+}
+function cancelUpload() {
+  pendingFiles = [];
+  document.getElementById('uploadMeta').classList.remove('visible');
+  document.getElementById('fileInput').value = '';
+}
+
+async function startUpload() {
+  if (!pendingFiles.length) return;
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+
+  const week = document.getElementById('uploadWeek').value;
+  const category = document.getElementById('uploadCategory').value;
+  const uploadedBy = document.getElementById('uploadBy').value || 'Unknown';
+  const notes = document.getElementById('uploadNotes').value;
+
+  let succeeded = 0;
+  for (let i = 0; i < pendingFiles.length; i++) {
+    const file = pendingFiles[i];
+    document.getElementById(`ustatus-${i}`).textContent = 'Uploading…';
+    document.getElementById(`ustatus-${i}`).className = 'upload-item-status';
+    try {
+      const fd = new FormData();
+      fd.append('files', file);
+      fd.append('week', week);
+      fd.append('category', category);
+      fd.append('uploadedBy', uploadedBy);
+      fd.append('notes', notes);
+      fd.append('projectId', PROJECT_ID);
+
+      const r = await fetch(`${API}/api/media/upload`, { method: 'POST', body: fd });
+      if (!r.ok) throw new Error((await r.json()).error || 'Upload failed');
+      document.getElementById(`ustatus-${i}`).textContent = '✓ Done';
+      document.getElementById(`ustatus-${i}`).className = 'upload-item-status done';
+      succeeded++;
+    } catch (err) {
+      document.getElementById(`ustatus-${i}`).textContent = '✗ ' + err.message;
+      document.getElementById(`ustatus-${i}`).className = 'upload-item-status error';
+    }
+  }
+
+  toast(`${succeeded} of ${pendingFiles.length} file(s) uploaded`, succeeded ? 'success' : 'error');
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg> Upload all`;
+
+  if (succeeded) {
+    setTimeout(() => {
+      cancelUpload();
+      loadMedia();
+      loadDashboardMedia(dashCurrentWeek, dashCurrentCat);
+    }, 1500);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  loadDashboardMedia('Week 12', 'all');
+});
+</script>
+</body>
+</html>
